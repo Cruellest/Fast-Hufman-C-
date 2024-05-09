@@ -48,11 +48,17 @@ int main(int argc, char const *argv[])
     FILE *original;
 
     original= fopen("original.txt", "rb");
+    if (original == NULL) {
+        printf("Falha ao abrir o arquivo.\n");
+        return 1;
+    }
+
 
     Lista_Caracteres lista(original);
 
     lista.printLetras();
 
+    fclose(original);
 
 
     return 0;
