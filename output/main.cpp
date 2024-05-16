@@ -123,6 +123,23 @@ MinHeap::MinHeap(vector<Node *> v){
   }
 }
 
+Node * MinHeap::extract(){
+  //TODO: implementar
+  Node * menor;
+  if (v.size() > 0) {
+    menor = v[0]; // ou v.front()
+    v[0] = v.back(); // ou v[v.vize()-1]
+    v.pop_back();
+    down(0);
+    return menor;
+  } return nullptr;
+}
+
+void MinHeap::insert(Node *n){
+  v.push_back(n);
+  up((v.size())-1);
+}
+
 int MinHeap::size(){
     return v.size();
 }
@@ -155,11 +172,11 @@ void MinHeap::down(int i){
   int e, d, maior;
   e = left(i);
   d = right(i);
-  if (e > (int) v.size() && v[e]->freq() < v[i]->freq())
+  if (e < (int) v.size() && v[e]->freq() < v[i]->freq())
     maior = e;
   else
     maior = i;
-  if (d > (int) v.size() && v[d]->freq() < v[maior]->freq())
+  if (d < (int) v.size() && v[d]->freq() < v[maior]->freq())
     maior = d;
   if (maior != i) {
     swap(i, maior);
@@ -168,7 +185,7 @@ void MinHeap::down(int i){
 }
 
 void MinHeap::up(int i) {
-  while (v[parent(i)] > v[i]) {
+  while (v[parent(i)] < v[i]) {
     swap(i, parent(i));
     i = parent(i);
   }
@@ -213,6 +230,13 @@ int main(int argc, char** argv)
         printf("\n\n %c\n", heap.v[i]->code());
     }
     
+    heap.escreve(" ", 0);
+    
+    char c = c;
+    Node *no = new Node(1, c, nullptr, nullptr);
+    heap.insert(no);
+    
+
     heap.escreve(" ", 0);
 
     return 0;
