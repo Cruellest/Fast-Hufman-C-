@@ -1,5 +1,10 @@
 #include <cstdio>
 #include <map>
+#include <cstddef>
+#include <cstdint>
+#include <climits>
+#include <string>
+#include <vector>
 
 using namespace std;
 
@@ -41,19 +46,16 @@ void printLetras(){
 
 };
 
-
-int main(int argc, char const *argv[])
+int main(int argc, char** argv)
 {
 
     FILE *original;
-
+    printf("oi");
     original= fopen("original.txt", "rb");
 
     Lista_Caracteres lista(original);
 
     lista.printLetras();
-
-
 
     return 0;
 }
