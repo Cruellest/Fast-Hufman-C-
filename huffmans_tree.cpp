@@ -11,12 +11,12 @@ using namespace std;
 class Node {
 private:
     int f;     // Frequency
-    char c;    // Character
+    uint8_t c; // Code
     Node *l;   // Left child
     Node *r;   // Right child
 
 public:
-    Node(int f, char c, Node *l = nullptr, Node *r = nullptr); // Construtor
+    Node(int f, uint8_t c, Node *l = nullptr, Node *r = nullptr); // Construtor
     Node(int f = 0, Node *l = nullptr, Node *r = nullptr);     // Construtor
     int freq() const;     // Devolve a frequência do caractere
     uint8_t code() const; // Devolve o código do caractere
@@ -25,7 +25,7 @@ public:
     bool leaf() const;    // Devolve true se é folha e false caso contrário
 };
 
-Node::Node(int f, char c, Node *l, Node *r) : f(f), c(c), l(l), r(r) {}
+Node::Node(int f, uint8_t c, Node *l, Node *r) : f(f), c(c), l(l), r(r) {}
 
 Node::Node(int f, Node *l, Node *r) : f(f), c('\0'), l(l), r(r) {}
 
@@ -219,4 +219,3 @@ void HuffmansTree::escreve(Node *node, const string &prefixo, bool temIrmao){
 void HuffmansTree::escreve(){
   escreve(root,"", false);
 }
-
