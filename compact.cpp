@@ -397,97 +397,111 @@ void HuffmansTree::gerarTabelaCodigos(Node* node, string byte, map<char, string>
 class Compact
 {
 private:
-    FILE *file;
+    FILE *fileIn;
     FILE *fileOut;
-    void montarCabecalho(FILE *fileIn, FILE *fileOut, Lista_Caracteres lista,HuffmansTree *huff,Bits *out);
+    Lista_Caracteres *lista;
+    MinHeap *heap;
+    Bits *out;
+    HuffmansTree *huff;
+    map<char,string> tabelaCodigos;
+
+    void declararVariaveis();
+    void montarCabecalho();
     void extrairLetrasDisponiveis(Node *node,FILE *fileOut);
     void adicionarCodigoLetras(Node *node, Bits *out);
+    void debugOptions();
+    void insertData();
+    void checarArquivos(string arquivoDeEntrada,string arquivoDeSaida);
 
 public:
-    Compact(FILE *fileIn,FILE *fileOut, bool debugFlag);
+    Compact(string arquivoDeEntrada,string arquivoDeSaida, bool debugFlag);
     ~Compact();
     
 };
 
-Compact::Compact(FILE *fileIn,FILE *fileOut , bool debugFlag)
+Compact::~Compact()
 {
-    if (!debugFlag){
+    delete lista;
+    delete heap;
+    fclose(this->fileIn);
+    fclose(this->fileOut);
+    delete out;
+    delete huff;
+}
 
-        Lista_Caracteres lista(fileIn);
-        vector<Node *> vectorNode;
-        Node *no;
-
-        for(const auto &letra : lista.letras) {
-            //printf("entrou no loop");
-            no = new Node(letra.second, letra.first, nullptr, nullptr);
-            vectorNode.push_back(no);
-        }
-
-        MinHeap heap(vectorNode);
-        HuffmansTree huff(heap);
-        map<char,string> tableCode= huff.gerarTabelaCodigos();
-
-
-
-
-        
-    }
-
-    else{
-
-        Bits out(fileOut);
-        Lista_Caracteres lista(fileIn);
-
-        lista.printLetras();
-
-        vector<Node *> vectorNode;
-
-        Node *no;
-        for(const auto &letra : lista.letras) {
-            //printf("entrou no loop");
-            no = new Node(letra.second, letra.first, nullptr, nullptr);
-            vectorNode.push_back(no);
-        }
-
-        MinHeap heap(vectorNode);
-
-        heap.escreve(" ",0);
-
-        HuffmansTree huff(heap);
-
-        huff.escreve();
-
-        map<char,string> tableCode= huff.gerarTabelaCodigos();
-
-        for(const auto &par : tableCode) {
-        printf("Letra:  %c, codigo Huffman: %s\n", par.first, par.second.c_str());
-        }
-
-        montarCabecalho(fileIn,fileOut,lista,&huff,&out);
-
-        fseek(fileIn, 0, SEEK_SET);
-        int ascii;
-        char letra;
-        map<char, string> tabelaCodigos = huff.gerarTabelaCodigos();
-        while ((ascii = fgetc(fileIn)) != EOF) {
-        letra = (char)ascii;
-        string codigo = tabelaCodigos[letra];
-        for (char bit : codigo) {
-        out.adiciona_bit(bit == '1');
-        }
-    }
-    out.descarrega();
-        
-
+void Compact::debugOptions(){
+    this->lista->printLetras();
+    this->heap->escreve(" ",0);
+    this->huff->escreve();
+    for(const auto &par : this->tabelaCodigos) {
+    printf("Letra:  %c, codigo Huffman: %s\n", par.first, par.second.c_str());
     }
 
 }
+
+void Compact::checarArquivos(string arquivoDeEntrada,string arquivoDeSaida){
+    this->fileIn = fopen(arquivoDeEntrada.c_str(),"rb");
+    if(this->fileIn == nullptr){
+        printf("Erro na abertura do arquivo\n");
+        exit(1);
+    }
+    
+    this->fileOut = fopen(arquivoDeSaida.c_str(),"wb");
+        if(this->fileOut == nullptr){
+        printf("Erro na Criação do arquivo de saida\n");
+        exit(1);
+    }
+}
+
+void Compact::declararVariaveis(){
+    this->lista = new Lista_Caracteres(this->fileIn);
+    vector<Node *> vectorNode;
+    Node *no;
+    for(const auto &letra : this->lista->letras) {
+        no = new Node(letra.second, letra.first, nullptr, nullptr);
+        vectorNode.push_back(no);
+    }
+
+    
+    this->heap = new MinHeap(vectorNode);
+    this->out = new Bits(this->fileOut);
+    this->huff = new HuffmansTree(*this->heap);
+
+}
+
+void Compact::insertData(){
+    fseek(this->fileIn, 0, SEEK_SET);
+    int ascii;
+    char letra;
+    while ((ascii = fgetc(this->fileIn)) != EOF) {
+    letra = (char)ascii;
+    string codigo = this->tabelaCodigos[letra];
+    for (char bit : codigo) {
+    this->out->adiciona_bit(bit == '1');
+    }
+}
+    this->out->descarrega();
+}
+
+Compact::Compact(string arquivoDeEntrada,string arquivoDeSaida, bool debugFlag)
+{
+
+    checarArquivos(arquivoDeEntrada,arquivoDeSaida);
+    declararVariaveis();
+    this->tabelaCodigos = this->huff->gerarTabelaCodigos();
+
+    if (debugFlag){
+        debugOptions();
+    }
+    montarCabecalho();
+    insertData();
+    
+        
+
+    }
 
     
 
-Compact::~Compact()
-{
-}
 
 void Compact::extrairLetrasDisponiveis(Node *node,FILE *fileOut){
     if (node == nullptr) {
@@ -505,17 +519,17 @@ void Compact::extrairLetrasDisponiveis(Node *node,FILE *fileOut){
     }
 }
 
-void Compact::montarCabecalho(FILE *fileIn, FILE *fileOut, Lista_Caracteres lista, HuffmansTree *huff,Bits *out){
+void Compact::montarCabecalho(){
     
-    uint16_t bit = lista.letras.size();
-    fwrite(&bit,sizeof(uint16_t),1,fileOut);
+    uint16_t bit = this->lista->letras.size();
+    fwrite(&bit,sizeof(uint16_t),1,this->fileOut);
 
-    uint32_t qntLetras = huff->root->freq();
+    uint32_t qntLetras = this->huff->root->freq();
 
-    fwrite(&qntLetras,sizeof(uint32_t),1,fileOut);
+    fwrite(&qntLetras,sizeof(uint32_t),1,this->fileOut);
 
-    extrairLetrasDisponiveis(huff->root,fileOut);
-    adicionarCodigoLetras(huff->root,out);
+    extrairLetrasDisponiveis(this->huff->root,this->fileOut);
+    adicionarCodigoLetras(this->huff->root,this->out);
 
 
 }
@@ -541,15 +555,9 @@ void Compact::adicionarCodigoLetras(Node *node, Bits *out) {
 
 int main(int argc, char const *argv[])
 {
-    FILE *original;
-    FILE *compactadoOut;
-    original = fopen("original.txt","rb");
-    compactadoOut = fopen("compactado.huff", "wb");
 
-    Compact compactado(original,compactadoOut,true);
-
-    fclose(original);
-    fclose(compactadoOut);
+    Compact compactado("original.txt","compactado.huff",true);
+    
     
 
     return 0;
