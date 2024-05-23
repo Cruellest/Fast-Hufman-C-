@@ -165,12 +165,15 @@ private:
     MinHeap minHeap;
     Node* root; //raiz da arvore
     void escreve(Node* node, const string& prefixo, bool temIrmao); // Método auxiliar para imprimir a árvore
+    void gerarTabelaCodigos(Node *node, string byte, map<char,string> &tabelaCodigos);
+
 
 public:
     HuffmansTree(MinHeap minHeap);
     ~HuffmansTree();
     void escreve();
     void deletaA(Node *node);
+    map<char,string> gerarTabelaCodigos();
 };
 
 HuffmansTree::HuffmansTree(MinHeap minHeap) : minHeap(minHeap) {
@@ -218,4 +221,28 @@ void HuffmansTree::escreve(Node *node, const string &prefixo, bool temIrmao){
 
 void HuffmansTree::escreve(){
   escreve(root,"", false);
+}
+
+map<char,string> HuffmansTree::gerarTabelaCodigos(){
+    
+    string byte;
+    map<char,string> tabelaCodigos; //Map com a função de guardar os codigos das letras
+    gerarTabelaCodigos(root,byte,tabelaCodigos);
+    return tabelaCodigos;
+
+    
+}
+
+void HuffmansTree::gerarTabelaCodigos(Node* node, string byte, map<char, string>& tabelaCodigos) {
+    if (node == nullptr) {
+        return;  // Se o codigo é null retornar recursivamente
+    }
+
+    if (node->leaf()) {  //Se for uma folha (caractere)
+        tabelaCodigos[node->code()] = byte;  //Adicione o codigo ao byte
+    } else {
+        // Recursivamente retorne para a direita e esquerda
+        gerarTabelaCodigos(node->left(), byte + "0", tabelaCodigos);  // Esquerda: append 0
+        gerarTabelaCodigos(node->right(), byte + "1", tabelaCodigos);  // Direita: append 1
+    }
 }

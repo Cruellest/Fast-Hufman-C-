@@ -5,9 +5,114 @@
 #include <climits>
 #include <string>
 #include <vector>
-#include <iostream>
 
 using namespace std;
+
+/* Byte com buffer para leitura ou escrita bit-a-bit em arquivo. No
+   modo escrita, quanto o buffer completa 8 bits, escreve 1 byte no
+   arquivo. No modo leitura, quando o buffer fica vazio, lê 1 byte do
+   arquivo e preenche o buffer. Utilize cada objeto desta classe apenas
+   para ler ou apenas para escrever, nunca os dois (seu comportamento
+   seria indefinido) */
+
+class Bits {
+private:
+  FILE *file;   // Ponteiro para o arquivo sendo lido/escrito
+  uint8_t b[8]; // Buffer com bits de um byte
+  uint8_t n;    // Quantidade de posições ocupadas no vetor acima
+
+public:
+  Bits(FILE *file);   // Construtor padrão com o arquivo que será lido ou escrito
+  uint8_t ocupados(); // Devolve quantos bits estão ocupados no buffer do byte
+  uint8_t livres();   // Devolve quantos bits ainda podem ser adicionados ao buffer do byte
+
+  // Funções do modo escrita
+  void adiciona_bit(uint8_t bit); // Adiciona um bit 0 ou 1 ao buffer (escreve byte no arquivo se encher)
+  void descarrega();              // Força a escrita do byte no buffer (completa com 0s, caso necessário)
+
+  // Funções do modo leitura
+  uint8_t obtem_bit(); // Obtém o próximo bit do buffer (lê um byte do arquivo se estiver vazio)
+};
+  
+Bits::Bits(FILE *file) :
+  file(file),
+  n(0)
+{ }
+
+void Bits::adiciona_bit(uint8_t bit)
+{
+  b[n++] = bit != 0; // para usar 0/1 mesmo se bit > 1
+
+  if (n == 8)
+    descarrega();
+}
+
+void Bits::descarrega()
+{
+  // Implementar
+
+  // Deve completar o byte com 0s para preencher os 8 bits, caso n < 8
+
+  if (this->n == 0){
+    return;
+  }
+
+  for(int i = this->n; i < 8; i++){
+    this->b[i] = 0;
+    
+  }
+    uint8_t byte = 0;
+
+    for(int i = 0; i < 8; i++){
+        byte <<= 1;
+        byte += this->b[i];
+
+    }
+    fwrite(&byte, sizeof(byte) , 1 ,this->file);
+
+    this->n = 0;
+
+  // Leia sobre a função fwrite
+
+  // No final, não esqueça de fazer n receber 0
+}
+
+uint8_t Bits::obtem_bit()
+{
+  // Caso n == 0, deve ler 1 byte do arquivo e colocar no buffer,
+  // ou devolver 2 caso não haja mais bytes para serem lidos do arquivo
+  if (n == 0) {
+    uint8_t byte;
+    size_t resultado = fread(&byte, sizeof(uint8_t), 1, file);
+
+    // Se não há mais bytes para serem lidos do arquivo
+    if (resultado != 1) {
+      return 2;
+    }
+
+    // Preenche o buffer com os bits do byte lido
+    for (int i = 0; i < 8; i++) {
+      b[i] = (byte >> (7 - i)) & 1;
+    }
+
+    // Atualiza n para 8 pois acabamos de ler 1 byte (8 bits)
+    n = 8;
+  }
+
+  // Devolve um bit (0 ou 1) e decrementa n
+  return b[--n];
+}
+
+
+uint8_t Bits::ocupados()
+{
+  return n;
+}
+
+uint8_t Bits::livres()
+{
+  return 8 - n;
+}
 
 class Lista_Caracteres{
 
@@ -190,7 +295,7 @@ void MinHeap::escreve(const string& prefixo, int i) {
         bool ehEsquerdo = i % 2 != 0;
         bool temIrmao = i < (int) v.size() - 1;
 
-        printf(prefixo.c_str());
+        printf("%s",prefixo.c_str());
         printf(ehEsquerdo && temIrmao ? "├──" : "└──");
 
         printf("%c\n", v[i]->code());
@@ -206,6 +311,7 @@ private:
     Node* root; //raiz da arvore
     void escreve(Node* node, const string& prefixo, bool temIrmao); // Método auxiliar para imprimir a árvore
     void gerarTabelaCodigos(Node *node, string byte, map<char,string> &tabelaCodigos);
+    friend class Compact;
 
 
 public:
@@ -214,6 +320,7 @@ public:
     void escreve();
     void deletaA(Node *node);
     map<char,string> gerarTabelaCodigos();
+
 };
 
 HuffmansTree::HuffmansTree(MinHeap minHeap) : minHeap(minHeap) {
@@ -287,42 +394,151 @@ void HuffmansTree::gerarTabelaCodigos(Node* node, string byte, map<char, string>
     }
 }
 
-
-
-int main(int argc, char** argv)
+class Compact
 {
+private:
+    FILE *file;
+    FILE *fileOut;
+    void montarCabecalho(FILE *fileIn, FILE *fileOut, Lista_Caracteres lista,HuffmansTree *huff);
+    void extrairLetrasDisponiveis(Node *node,FILE *fileOut);
+    void adicionarCodigoLetras(Node *node, Bits *out);
 
-    FILE *original;
-    original= fopen("original.txt", "rb");
-
-    Lista_Caracteres lista(original);
-
-    lista.printLetras();
-    vector<Node *> vectorNode;
-
-    Node *no;
-    for(const auto &letra : lista.letras) {
-        //printf("entrou no loop");
-        no = new Node(letra.second, letra.first, nullptr, nullptr);
-        vectorNode.push_back(no);
-    }
-
-    MinHeap heap(vectorNode);
+public:
+    Compact(FILE *fileIn,FILE *fileOut, bool debugFlag);
+    ~Compact();
     
-   heap.escreve(" ", 0);
+};
 
-   HuffmansTree huff(heap);
+Compact::Compact(FILE *fileIn,FILE *fileOut , bool debugFlag)
+{
+    if (!debugFlag){
 
-   huff.escreve();
+        Lista_Caracteres lista(fileIn);
+        vector<Node *> vectorNode;
+        Node *no;
 
-   map<char,string> test= huff.gerarTabelaCodigos();
+        for(const auto &letra : lista.letras) {
+            //printf("entrou no loop");
+            no = new Node(letra.second, letra.first, nullptr, nullptr);
+            vectorNode.push_back(no);
+        }
 
-   for(const auto &par : test) {
+        MinHeap heap(vectorNode);
+        HuffmansTree huff(heap);
+        map<char,string> tableCode= huff.gerarTabelaCodigos();
+
+
+
+
+        
+    }
+
+    else{
+
+        Lista_Caracteres lista(fileIn);
+
+        lista.printLetras();
+
+        vector<Node *> vectorNode;
+
+        Node *no;
+        for(const auto &letra : lista.letras) {
+            //printf("entrou no loop");
+            no = new Node(letra.second, letra.first, nullptr, nullptr);
+            vectorNode.push_back(no);
+        }
+
+        MinHeap heap(vectorNode);
+
+        heap.escreve(" ",0);
+
+        HuffmansTree huff(heap);
+
+        huff.escreve();
+
+        map<char,string> tableCode= huff.gerarTabelaCodigos();
+
+        for(const auto &par : tableCode) {
         printf("Letra:  %c, codigo Huffman: %s\n", par.first, par.second.c_str());
+        }
+
+        montarCabecalho(fileIn,fileOut,lista,&huff);
+
+        
 
     }
+
+}
+
+    
+
+Compact::~Compact()
+{
+}
+
+void Compact::extrairLetrasDisponiveis(Node *node,FILE *fileOut){
+    if (node == nullptr) {
+        return;  // Se o codigo é null retornar recursivamente
+    }
+
+    if (node->leaf()) {  //Se for uma folha (caractere)
+        uint8_t bit = node->code();  //Adicione o codigo ao byte
+        fwrite(&bit,sizeof(uint8_t),1,fileOut);
+
+    } else {
+        // Recursivamente retorne para a direita e esquerda
+        extrairLetrasDisponiveis(node->left(),fileOut);  // 
+        extrairLetrasDisponiveis(node->right(),fileOut);  // 1
+    }
+}
+
+void Compact::montarCabecalho(FILE *fileIn, FILE *fileOut, Lista_Caracteres lista, HuffmansTree *huff){
+    
+    Bits out(fileOut);
+    uint16_t bit = lista.letras.size();
+    fwrite(&bit,sizeof(uint16_t),1,fileOut);
+
+    uint32_t qntLetras = huff->root->freq();
+
+    fwrite(&qntLetras,sizeof(uint32_t),1,fileOut);
+
+    extrairLetrasDisponiveis(huff->root,fileOut);
+    adicionarCodigoLetras(huff->root,&out);
+
+
+}
+
+void Compact::adicionarCodigoLetras(Node *node, Bits *out) {
+    if (node == nullptr) {
+        return;  // Se o nó é null, retornar
+    }
+
+    if (node->leaf()){
+        out->adiciona_bit(1);
+        return;
+    }
+
+    else{
+        out->adiciona_bit(0);
+        adicionarCodigoLetras(node->left(),out);
+        adicionarCodigoLetras(node->right(),out);
+        
+    }
+
+}
+
+int main(int argc, char const *argv[])
+{
+    FILE *original;
+    FILE *compactadoOut;
+    original = fopen("original.txt","rb");
+    compactadoOut = fopen("compactado.huff", "wb");
+
+    Compact compactado(original,compactadoOut,true);
 
     fclose(original);
+    fclose(compactadoOut);
+    
 
     return 0;
 }
