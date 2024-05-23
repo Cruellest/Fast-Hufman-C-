@@ -399,7 +399,7 @@ class Compact
 private:
     FILE *file;
     FILE *fileOut;
-    void montarCabecalho(FILE *fileIn, FILE *fileOut, Lista_Caracteres lista,HuffmansTree *huff);
+    void montarCabecalho(FILE *fileIn, FILE *fileOut, Lista_Caracteres lista,HuffmansTree *huff,Bits *out);
     void extrairLetrasDisponiveis(Node *node,FILE *fileOut);
     void adicionarCodigoLetras(Node *node, Bits *out);
 
@@ -435,6 +435,7 @@ Compact::Compact(FILE *fileIn,FILE *fileOut , bool debugFlag)
 
     else{
 
+        Bits out(fileOut);
         Lista_Caracteres lista(fileIn);
 
         lista.printLetras();
@@ -462,8 +463,20 @@ Compact::Compact(FILE *fileIn,FILE *fileOut , bool debugFlag)
         printf("Letra:  %c, codigo Huffman: %s\n", par.first, par.second.c_str());
         }
 
-        montarCabecalho(fileIn,fileOut,lista,&huff);
+        montarCabecalho(fileIn,fileOut,lista,&huff,&out);
 
+        fseek(fileIn, 0, SEEK_SET);
+        int ascii;
+        char letra;
+        map<char, string> tabelaCodigos = huff.gerarTabelaCodigos();
+        while ((ascii = fgetc(fileIn)) != EOF) {
+        letra = (char)ascii;
+        string codigo = tabelaCodigos[letra];
+        for (char bit : codigo) {
+        out.adiciona_bit(bit == '1');
+        }
+    }
+    out.descarrega();
         
 
     }
@@ -492,9 +505,8 @@ void Compact::extrairLetrasDisponiveis(Node *node,FILE *fileOut){
     }
 }
 
-void Compact::montarCabecalho(FILE *fileIn, FILE *fileOut, Lista_Caracteres lista, HuffmansTree *huff){
+void Compact::montarCabecalho(FILE *fileIn, FILE *fileOut, Lista_Caracteres lista, HuffmansTree *huff,Bits *out){
     
-    Bits out(fileOut);
     uint16_t bit = lista.letras.size();
     fwrite(&bit,sizeof(uint16_t),1,fileOut);
 
@@ -503,7 +515,7 @@ void Compact::montarCabecalho(FILE *fileIn, FILE *fileOut, Lista_Caracteres list
     fwrite(&qntLetras,sizeof(uint32_t),1,fileOut);
 
     extrairLetrasDisponiveis(huff->root,fileOut);
-    adicionarCodigoLetras(huff->root,&out);
+    adicionarCodigoLetras(huff->root,out);
 
 
 }
