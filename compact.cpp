@@ -5,6 +5,7 @@
 #include <climits>
 #include <string>
 #include <vector>
+#include <cstring>
 
 using namespace std;
 
@@ -20,6 +21,7 @@ private:
   FILE *file;   // Ponteiro para o arquivo sendo lido/escrito
   uint8_t b[8]; // Buffer com bits de um byte
   uint8_t n;    // Quantidade de posições ocupadas no vetor acima
+  uint8_t j;
 
 public:
   Bits(FILE *file);   // Construtor padrão com o arquivo que será lido ou escrito
@@ -32,6 +34,7 @@ public:
 
   // Funções do modo leitura
   uint8_t obtem_bit(); // Obtém o próximo bit do buffer (lê um byte do arquivo se estiver vazio)
+  char obtem_byte();
 };
   
 Bits::Bits(FILE *file) :
@@ -46,6 +49,13 @@ void Bits::adiciona_bit(uint8_t bit)
   if (n == 8)
     descarrega();
 }
+char Bits::obtem_byte() {
+        int byte = 0;
+        for (int i = 0; i < 8; i++) {
+            byte = (byte << 1) | obtem_bit();
+        }
+        return static_cast<char>(byte);
+    }
 
 void Bits::descarrega()
 {
@@ -98,9 +108,13 @@ uint8_t Bits::obtem_bit()
     // Atualiza n para 8 pois acabamos de ler 1 byte (8 bits)
     n = 8;
   }
+    if (j >= 8){
+        j = 0;
+    }
 
+    n--;
   // Devolve um bit (0 ou 1) e decrementa n
-  return b[--n];
+  return b[j++];
 }
 
 
@@ -161,13 +175,16 @@ private:
     Node *r;   // Right child 
 
 public:
-    Node(int f, uint8_t c, Node *l = nullptr, Node *r = nullptr); // Construtor
-    Node(int f = 0, Node *l = nullptr, Node *r = nullptr);     // Construtor
-    int freq() const;     // Devolve a frequência do caractere
-    uint8_t code() const; // Devolve o código do caractere
-    Node* left();         // Devolve o filho esquerdo
-    Node* right();        // Devolve o filho direito
-    bool leaf() const;    // Devolve true se é folha e false caso contrário
+    Node(int f, uint8_t c, Node *l = nullptr, Node *r = nullptr); // Constructor
+    Node(int f = 0, Node *l = nullptr, Node *r = nullptr);        // Constructor
+    int freq() const;     // Get frequency of the character
+    uint8_t code() const; // Get code of the character
+    void codeSet(uint8_t newcode);
+    Node* left() const;   // Get left child
+    Node* right() const;  // Get right child
+    void setLeft(Node* left);   // Set left child
+    void setRight(Node* right); // Set right child
+    bool leaf() const;    // Returns true if leaf, false otherwise
 };
 
 Node::Node(int f, uint8_t c, Node *l, Node *r) : f(f), c(c), l(l), r(r) {}
@@ -182,17 +199,30 @@ uint8_t Node::code() const {
     return c;
 }
 
-Node* Node::left() {
+void Node::codeSet(uint8_t newCode){
+    this->c = newCode;
+}
+
+Node* Node::left() const {
     return l;
 }
 
-Node* Node::right() {
+Node* Node::right() const {
     return r;
+}
+
+void Node::setLeft(Node* left) {
+    l = left;
+}
+
+void Node::setRight(Node* right) {
+    r = right;
 }
 
 bool Node::leaf() const {
     return l == nullptr && r == nullptr;
 }
+
 
 /* Lista de min-prioridades (min-heap) com nós de uma árvore de
    Huffman, utilizando a frequência como chave */
@@ -307,15 +337,16 @@ void MinHeap::escreve(const string& prefixo, int i) {
 
 class HuffmansTree {
 private:
-    MinHeap minHeap;
+    MinHeap *minHeap;
     Node* root; //raiz da arvore
     void escreve(Node* node, const string& prefixo, bool temIrmao); // Método auxiliar para imprimir a árvore
     void gerarTabelaCodigos(Node *node, string byte, map<char,string> &tabelaCodigos);
     friend class Compact;
-
+    friend class Decompact;
 
 public:
-    HuffmansTree(MinHeap minHeap);
+    HuffmansTree(MinHeap *minHeap);
+    HuffmansTree(Node *no);
     ~HuffmansTree();
     void escreve();
     void deletaA(Node *node);
@@ -323,19 +354,24 @@ public:
 
 };
 
-HuffmansTree::HuffmansTree(MinHeap minHeap) : minHeap(minHeap) {
+HuffmansTree::HuffmansTree(MinHeap *minHeap) : minHeap(minHeap) {
     Node* no;
-    while (this->minHeap.size() > 1) {
-        Node* left = this->minHeap.extract();
-        Node* right = this->minHeap.extract();
+    while (this->minHeap->size() > 1) {
+        Node* left = this->minHeap->extract();
+        Node* right = this->minHeap->extract();
         int combinedFreq = left->freq() + right->freq();
         no = new Node(combinedFreq, left, right);
-        this->minHeap.insert(no);
+        this->minHeap->insert(no);
     }
-    if (this->minHeap.size() == 1){
-      root = this->minHeap.extract();
+    if (this->minHeap->size() == 1){
+      root = this->minHeap->extract();
     }
 }
+
+HuffmansTree::HuffmansTree(Node *no): minHeap(nullptr){
+    this->root = no;
+
+};
 
 HuffmansTree::~HuffmansTree() {
 
@@ -357,9 +393,12 @@ void HuffmansTree::escreve(Node *node, const string &prefixo, bool temIrmao){
   if (node != nullptr) {
         printf("%s", prefixo.c_str());
         printf(temIrmao ? "├──" : "└──");
-        printf("%d\n", node->freq());
-        
-
+        if (node->code() != 0){
+            printf("%c\n", node->code());
+        }
+        else{
+            printf("%d\n",node->freq());
+        }
         string newPrefix = prefixo + (temIrmao ? "│   " : "    ");
         escreve(node->left(), newPrefix, node->right() != nullptr);
         escreve(node->right(), newPrefix, false);
@@ -465,7 +504,7 @@ void Compact::declararVariaveis(){
     
     this->heap = new MinHeap(vectorNode);
     this->out = new Bits(this->fileOut);
-    this->huff = new HuffmansTree(*this->heap);
+    this->huff = new HuffmansTree(this->heap);
 
 }
 
@@ -553,10 +592,121 @@ void Compact::adicionarCodigoLetras(Node *node, Bits *out) {
 
 }
 
+class Decompact {
+private:
+    FILE *fileIn;
+    FILE *fileOut;
+    Bits *in;
+    HuffmansTree *huff;
+    uint16_t qntLetras;
+    uint32_t tamanhoDoArquivo;
+    vector<char> letras;
+    void reconstruirArvore(Node *no,int &cont);
+    void escreverDados();
+    void decodificarLetra(Node *no,uint32_t *cont);
+
+public:
+    Decompact(string fileIn, string fileOut);
+    ~Decompact();
+};
+
+Decompact::Decompact(string fileIn, string fileOut){
+    
+    this->fileIn = fopen(fileIn.c_str(),"rb");
+    this->fileOut = fopen(fileOut.c_str(),"wb");
+    in = new Bits(this->fileIn);
+
+    fread(&this->qntLetras,sizeof(uint16_t),1,this->fileIn);
+    printf("Quantidade de characteres diferentes do arquivo: %d\n",this->qntLetras);
+    
+    
+    fread(&tamanhoDoArquivo,sizeof(uint32_t),1,this->fileIn);
+    printf("Quantidade total de characteres no arquivo: %d\n", this->tamanhoDoArquivo);
+
+
+    
+    printf("Characteres diferentes no Arquivo: ");
+    for (int i = 0; i < this->qntLetras; i++)
+    {
+        letras.push_back(fgetc(this->fileIn));
+        printf("%c ",this->letras[i]);
+    }
+    printf("\n");
+    
+    Node no;
+    this->huff = new HuffmansTree(&no);
+    int cont = 0;
+    reconstruirArvore(this->huff->root,cont);
+    this->huff->escreve();
+    escreverDados();
+
+}
+
+void Decompact::reconstruirArvore(Node *no, int &cont) {
+    if (cont >= this->qntLetras) {
+        return;
+    }
+
+    if (in->obtem_bit() == 0) {
+        Node *leftNode = new Node();
+        Node *rightNode = new Node();
+        no->setLeft(leftNode);
+        no->setRight(rightNode);
+        reconstruirArvore(leftNode, cont);
+        reconstruirArvore(rightNode, cont);
+    } else {
+        no->codeSet(this->letras[cont]);
+        cont++;
+    }
+}
+
+void Decompact::decodificarLetra(Node* no, uint32_t* cont) {
+    if (*cont >= this->tamanhoDoArquivo) {
+        return;
+    }
+
+    if (no->leaf()) {
+        uint8_t temp = no->code();
+        fwrite(&temp, sizeof(uint8_t), 1, this->fileOut);
+        (*cont)++;
+        return;
+    }
+
+    uint8_t bit = in->obtem_bit();
+    if (bit == 0) {
+        decodificarLetra(no->left(), cont);
+    } else {
+        decodificarLetra(no->right(), cont);
+    }
+}
+
+
+void Decompact::escreverDados() {
+    uint32_t cont = 0;
+    
+    while (cont < tamanhoDoArquivo) {
+        decodificarLetra(huff->root, &cont);
+    }
+}
+
+
+Decompact::~Decompact(){
+
+};
+
 int main(int argc, char const *argv[])
 {
-
-    Compact compactado("original.txt","compactado.huff",true);
+    if (strcmp(argv[1],"c") == 0){
+        if (argv[4] == "--debug"){
+            Compact file(argv[2],argv[3],true);
+        }
+        else{
+            Compact file(argv[2],argv[3],false);
+        }
+    }
+    else if(strcmp(argv[1],"d") == 0){
+        Decompact file(argv[2],argv[3]);
+    }
     
     
 
