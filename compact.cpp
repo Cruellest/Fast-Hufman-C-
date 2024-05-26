@@ -21,7 +21,7 @@ private:
   FILE *file;   // Ponteiro para o arquivo sendo lido/escrito
   uint8_t b[8]; // Buffer com bits de um byte
   uint8_t n;    // Quantidade de posições ocupadas no vetor acima
-  uint8_t j;
+  uint8_t j = 0;
 
 public:
   Bits(FILE *file);   // Construtor padrão com o arquivo que será lido ou escrito
@@ -34,7 +34,6 @@ public:
 
   // Funções do modo leitura
   uint8_t obtem_bit(); // Obtém o próximo bit do buffer (lê um byte do arquivo se estiver vazio)
-  char obtem_byte();
 };
   
 Bits::Bits(FILE *file) :
@@ -49,13 +48,6 @@ void Bits::adiciona_bit(uint8_t bit)
   if (n == 8)
     descarrega();
 }
-char Bits::obtem_byte() {
-        int byte = 0;
-        for (int i = 0; i < 8; i++) {
-            byte = (byte << 1) | obtem_bit();
-        }
-        return static_cast<char>(byte);
-    }
 
 void Bits::descarrega()
 {
@@ -128,21 +120,23 @@ uint8_t Bits::livres()
   return 8 - n;
 }
 
+/*Lista os caracteres do arquivo com suas respectivas Frequencias e Codigos, Por meio de um Map*/
 class Lista_Caracteres{
 
     private:
-    FILE *file;
+    FILE *file; //Arquivo a ser lido;
 
     public:
-    map<char,int> letras;
+    map<char,int> letras; //Map que irá armazenar as letras com suas frequencias;
 
-    Lista_Caracteres(FILE *f){
+
+    Lista_Caracteres(FILE *f){  //construtor da classe
         file = f;
         contarLetras();
     };
 
-    void contarLetras(){
-        int ascii;
+    void contarLetras(){ //Checa quais letras estão presentes no arquivo, caso elas ja estejam na Map, adiciona +1 na frequencia
+        int ascii;       //caso o contrario adiciona mais uma entrada na Map;
         char letra;
         while((ascii = fgetc(file)) != EOF){
 
@@ -158,7 +152,7 @@ class Lista_Caracteres{
         }
     }
 
-void printLetras(){
+void printLetras(){ //Função para printar letras dentro da Map;
     for(const auto &par : letras) {
         printf("Letra:  %c, Frequencia: %d\n", par.first, par.second);
     }
@@ -169,22 +163,22 @@ void printLetras(){
 /* Nó de uma árvore de Huffman */
 class Node {
 private:
-    int f;     // Frequency
-    uint8_t c; // Code
-    Node *l;   // Left child
-    Node *r;   // Right child 
+    int f;     // Frequencia;
+    uint8_t c; // Codigo;
+    Node *l;   // Filho Esquerdo;
+    Node *r;   // Filho Direito;
 
 public:
-    Node(int f, uint8_t c, Node *l = nullptr, Node *r = nullptr); // Constructor
-    Node(int f = 0, Node *l = nullptr, Node *r = nullptr);        // Constructor
-    int freq() const;     // Get frequency of the character
-    uint8_t code() const; // Get code of the character
-    void codeSet(uint8_t newcode);
-    Node* left() const;   // Get left child
-    Node* right() const;  // Get right child
-    void setLeft(Node* left);   // Set left child
-    void setRight(Node* right); // Set right child
-    bool leaf() const;    // Returns true if leaf, false otherwise
+    Node(int f, uint8_t c, Node *l = nullptr, Node *r = nullptr); // Construtor;
+    Node(int f = 0, Node *l = nullptr, Node *r = nullptr);        // Construtor;
+    int freq() const;     // Getter para Frequencia do Caractere;
+    uint8_t code() const; // Getter para o Codigo do Caractere;
+    void codeSet(uint8_t newcode); //Setter para o Codigo do Caractere;
+    Node* left() const;   // Getter Filho Esquerdo;
+    Node* right() const;  // Getter Filho Direito;
+    void setLeft(Node* left);   // Setter Filho Esquerdo;
+    void setRight(Node* right); // Setter Filho Direito;
+    bool leaf() const;    // Retorna True se for folha e False caso contrario;
 };
 
 Node::Node(int f, uint8_t c, Node *l, Node *r) : f(f), c(c), l(l), r(r) {}
@@ -228,36 +222,34 @@ bool Node::leaf() const {
    Huffman, utilizando a frequência como chave */
 class MinHeap {
 private:
-    void up(int i);             // Sobe
-    void down(int i);           // Desce
-    void swap(int i, int j);
-    int parent(int i); // Pai
-    int left(int i);   // Filho esquerdo
-    int right(int i);  // Filho direito
+    void up(int i);             // Sobe;
+    void down(int i);           // Desce;
+    void swap(int i, int j);    //Troca;
+    int parent(int i);          // Pai;
+    int left(int i);            // Filho esquerdo;
+    int right(int i);           // Filho direito;
 
 public:
-    vector<Node*> v;                    // Elementos
-    MinHeap(vector<Node*> v);            // Construtor padrão
-    ~MinHeap();           // Destrutor padrão
-    int size();        // Tamanho da heap
-    void insert(Node *n); // Inserir elemento
-    Node* extract();      // Remover (menor) elemento
-    void escreve(const string& prefixo, int i);
+    vector<Node*> v;                            // Elementos
+    MinHeap(vector<Node*> v);                   // Construtor padrão;
+    ~MinHeap();                                 // Destrutor padrão;
+    int size();                                 // Tamanho da heap;
+    void insert(Node *n);                       // Inserir elemento;
+    Node* extract();                            // Remover (menor) elemento;
+    void escreve(const string& prefixo, int i); // Escreve todos os elementos em formato de arvore binaria;
 };
 
 MinHeap::MinHeap(vector<Node*> v) : v(v) {
-    //TODO: implementar (constroi_max_heap)
     for (int i = v.size() / 2 - 1; i >= 0; i--) {
         down(i);
     }
 }
 
 Node* MinHeap::extract() {
-    //TODO: implementar
     Node* menor;
     if (v.size() > 0) {
-        menor = v[0]; // ou v.front()
-        v[0] = v.back(); // ou v[v.size()-1]
+        menor = v[0];
+        v[0] = v.back();
         v.pop_back();
         down(0);
         return menor;
@@ -295,9 +287,6 @@ void MinHeap::swap(int i, int j) {
 }
 
 void MinHeap::down(int i) {
-    //printf("entrou em down");
-    //printf("%d", i);
-    //TODO: implementar
     int e, d, maior;
     e = left(i);
     d = right(i);
@@ -335,22 +324,25 @@ void MinHeap::escreve(const string& prefixo, int i) {
     }
 }
 
+/*Arvore de huffman com contrutor e operações basicas alem de funçoes para escreve-la
+  e gerar os codigos de huffman para cada letra*/
+
 class HuffmansTree {
 private:
     MinHeap *minHeap;
-    Node* root; //raiz da arvore
-    void escreve(Node* node, const string& prefixo, bool temIrmao); // Método auxiliar para imprimir a árvore
-    void gerarTabelaCodigos(Node *node, string byte, map<char,string> &tabelaCodigos);
-    friend class Compact;
-    friend class Decompact;
+    Node* root;                                                                         //Raiz da arvore;
+    void escreve(Node* node, const string& prefixo, bool temIrmao);                     //Método auxiliar para imprimir a árvore;
+    void gerarTabelaCodigos(Node *node, string byte, map<char,string> &tabelaCodigos);  //Método auxiliar para gerar codigos huffman para cada letra individualmente;
+    friend class Compact;                                                               //Classe para compactar arvore;
+    friend class Decompact;                                                             //Classe para descompactar arvore;
 
 public:
-    HuffmansTree(MinHeap *minHeap);
-    HuffmansTree(Node *no);
-    ~HuffmansTree();
-    void escreve();
-    void deletaA(Node *node);
-    map<char,string> gerarTabelaCodigos();
+    HuffmansTree(MinHeap *minHeap);         //Construtor da Classe;
+    HuffmansTree(Node *no);                 //Construtor extra (Essencial na Reconstrução);
+    ~HuffmansTree();                        //Destrutor da classe
+    void escreve();                         //Metodo para a imprimir a arvore
+    void deletaA(Node *node);               //Metodo auxiliar para Deletar a arvore
+    map<char,string> gerarTabelaCodigos();  //Metodo para retornar a tabela gerada.
 
 };
 
@@ -432,29 +424,29 @@ void HuffmansTree::gerarTabelaCodigos(Node* node, string byte, map<char, string>
         gerarTabelaCodigos(node->right(), byte + "1", tabelaCodigos);  // Direita: append 1
     }
 }
-
+ /*Compactador para o arquivo .txt realizando todas as funções por meio de metodos internos*/
 class Compact
 {
 private:
-    FILE *fileIn;
-    FILE *fileOut;
-    Lista_Caracteres *lista;
-    MinHeap *heap;
-    Bits *out;
-    HuffmansTree *huff;
-    map<char,string> tabelaCodigos;
+    FILE *fileIn;                   //Arquivo de Entrada;
+    FILE *fileOut;                  //Arquivo de Saida;
+    Lista_Caracteres *lista;        //Lista com caracteres presentes no arquivo de entrada;
+    MinHeap *heap;                  //Minheap;
+    Bits *out;                      //Buffer de saida;
+    HuffmansTree *huff;             //Arvore de huffman criada com base na MinHeap;
+    map<char,string> tabelaCodigos; //Map para armazenar os codigos de cada letra;
 
-    void declararVariaveis();
-    void montarCabecalho();
-    void extrairLetrasDisponiveis(Node *node,FILE *fileOut);
-    void adicionarCodigoLetras(Node *node, Bits *out);
-    void debugOptions();
-    void insertData();
-    void checarArquivos(string arquivoDeEntrada,string arquivoDeSaida);
+    void declararVariaveis();                                               //Declara variaveis para compactar o arquivo;
+    void montarCabecalho();                                                 //Monta o cabeçalho do arquivo compactado;
+    void extrairLetrasDisponiveis(Node *node,FILE *fileOut);                //Extrai as letras disponiveis no arquivo de entrada;
+    void adicionarCodigoLetras(Node *node, Bits *out);                      //Adiciona o codigo das letras no cabeçalho;
+    void debugOptions();                                                    //Ativa os logs de debug na execução;
+    void insertData();                                                      //Insere os dados das letras já codificados no arquivo;
+    void checarArquivos(string arquivoDeEntrada,string arquivoDeSaida);     //Checa a existencia dos arquivos de entrada e saida;
 
 public:
-    Compact(string arquivoDeEntrada,string arquivoDeSaida, bool debugFlag);
-    ~Compact();
+    Compact(string arquivoDeEntrada,string arquivoDeSaida, bool debugFlag); //Construtor da classe;
+    ~Compact();                                                             //Destrutor da classe;
     
 };
 
@@ -500,8 +492,6 @@ void Compact::declararVariaveis(){
         no = new Node(letra.second, letra.first, nullptr, nullptr);
         vectorNode.push_back(no);
     }
-
-    
     this->heap = new MinHeap(vectorNode);
     this->out = new Bits(this->fileOut);
     this->huff = new HuffmansTree(this->heap);
@@ -524,7 +514,6 @@ void Compact::insertData(){
 
 Compact::Compact(string arquivoDeEntrada,string arquivoDeSaida, bool debugFlag)
 {
-
     checarArquivos(arquivoDeEntrada,arquivoDeSaida);
     declararVariaveis();
     this->tabelaCodigos = this->huff->gerarTabelaCodigos();
@@ -534,14 +523,7 @@ Compact::Compact(string arquivoDeEntrada,string arquivoDeSaida, bool debugFlag)
     }
     montarCabecalho();
     insertData();
-    
-        
-
     }
-
-    
-
-
 void Compact::extrairLetrasDisponiveis(Node *node,FILE *fileOut){
     if (node == nullptr) {
         return;  // Se o codigo é null retornar recursivamente
@@ -569,8 +551,6 @@ void Compact::montarCabecalho(){
 
     extrairLetrasDisponiveis(this->huff->root,this->fileOut);
     adicionarCodigoLetras(this->huff->root,this->out);
-
-
 }
 
 void Compact::adicionarCodigoLetras(Node *node, Bits *out) {
@@ -586,60 +566,56 @@ void Compact::adicionarCodigoLetras(Node *node, Bits *out) {
     else{
         out->adiciona_bit(0);
         adicionarCodigoLetras(node->left(),out);
-        adicionarCodigoLetras(node->right(),out);
-        
+        adicionarCodigoLetras(node->right(),out);    
     }
 
 }
 
+
+/*Classe Criada para Descompactar arquivos compactados pela função Compactar*/
 class Decompact {
 private:
-    FILE *fileIn;
-    FILE *fileOut;
-    Bits *in;
-    HuffmansTree *huff;
-    uint16_t qntLetras;
-    uint32_t tamanhoDoArquivo;
-    vector<char> letras;
-    void reconstruirArvore(Node *no,int &cont);
-    void escreverDados();
-    void decodificarLetra(Node *no,uint32_t *cont);
+    FILE *fileIn;                                       //Arquivo de Entrada;
+    FILE *fileOut;                                      //Arquivo de Saida;
+    Bits *in;                                           //Buffer de Saida;
+    HuffmansTree *huff;                                 //ArvoreReconstruida;
+    uint16_t qntLetras;                                 //Quantidade de caracteres diferentes no Arquivo;
+    uint32_t tamanhoDoArquivo;                          //Quantidade total de caracteres no Arquivo;
+    vector<char> letras;                                //Vetor auxiliar para reconstruir a arvore de Huffman;
+    void reconstruirArvore(Node *no, int &cont);        //Metodo Para reconstruir a arvore;
+    void escreverDados();                               //Metodo para escrever os dados no arquivo;
+    void decodificarLetra(Node *no, uint32_t *cont);    //Metodo para decodificar os codigos das letras;
+
 
 public:
-    Decompact(string fileIn, string fileOut);
-    ~Decompact();
+    Decompact(string fileIn, string fileOut);   //Construtor da classe (Ativa a decompactação);
+    ~Decompact();                               //Destrutor da classe;
 };
 
-Decompact::Decompact(string fileIn, string fileOut){
-    
-    this->fileIn = fopen(fileIn.c_str(),"rb");
-    this->fileOut = fopen(fileOut.c_str(),"wb");
+Decompact::Decompact(string fileIn, string fileOut) {
+    this->fileIn = fopen(fileIn.c_str(), "rb");
+    this->fileOut = fopen(fileOut.c_str(), "wb");
     in = new Bits(this->fileIn);
 
-    fread(&this->qntLetras,sizeof(uint16_t),1,this->fileIn);
-    printf("Quantidade de characteres diferentes do arquivo: %d\n",this->qntLetras);
-    
-    
-    fread(&tamanhoDoArquivo,sizeof(uint32_t),1,this->fileIn);
+    fread(&this->qntLetras, sizeof(uint16_t), 1, this->fileIn);
+    printf("Quantidade de characteres diferentes do arquivo: %d\n", this->qntLetras);
+
+    fread(&tamanhoDoArquivo, sizeof(uint32_t), 1, this->fileIn);
     printf("Quantidade total de characteres no arquivo: %d\n", this->tamanhoDoArquivo);
 
-
-    
     printf("Characteres diferentes no Arquivo: ");
-    for (int i = 0; i < this->qntLetras; i++)
-    {
+    for (int i = 0; i < this->qntLetras; i++) {
         letras.push_back(fgetc(this->fileIn));
-        printf("%c ",this->letras[i]);
+        printf("%c ", this->letras[i]);
     }
     printf("\n");
-    
-    Node no;
-    this->huff = new HuffmansTree(&no);
+
+    Node *no = new Node();
+    this->huff = new HuffmansTree(no);
     int cont = 0;
-    reconstruirArvore(this->huff->root,cont);
+    reconstruirArvore(this->huff->root, cont);
     this->huff->escreve();
     escreverDados();
-
 }
 
 void Decompact::reconstruirArvore(Node *no, int &cont) {
@@ -660,7 +636,7 @@ void Decompact::reconstruirArvore(Node *no, int &cont) {
     }
 }
 
-void Decompact::decodificarLetra(Node* no, uint32_t* cont) {
+void Decompact::decodificarLetra(Node *no, uint32_t *cont) {
     if (*cont >= this->tamanhoDoArquivo) {
         return;
     }
@@ -680,35 +656,33 @@ void Decompact::decodificarLetra(Node* no, uint32_t* cont) {
     }
 }
 
-
 void Decompact::escreverDados() {
     uint32_t cont = 0;
-    
+
     while (cont < tamanhoDoArquivo) {
         decodificarLetra(huff->root, &cont);
     }
 }
 
+Decompact::~Decompact() {
+    delete huff;
+    delete in;
+    fclose(fileIn);
+    fclose(fileOut);
+}
 
-Decompact::~Decompact(){
-
-};
-
-int main(int argc, char const *argv[])
-{
-    if (strcmp(argv[1],"c") == 0){
-        if (argv[4] == "--debug"){
-            Compact file(argv[2],argv[3],true);
+int main(int argc, char const *argv[]) {
+    if (strcmp(argv[1], "c") == 0) {
+        if (strcmp(argv[4],"--debug")) {
+            Compact file(argv[2], argv[3], true);
+        } else {
+            Compact file(argv[2], argv[3], false);
         }
-        else{
-            Compact file(argv[2],argv[3],false);
-        }
+    } else if (strcmp(argv[1], "d") == 0) {
+        Decompact file(argv[2], argv[3]);
     }
-    else if(strcmp(argv[1],"d") == 0){
-        Decompact file(argv[2],argv[3]);
-    }
-    
-    
 
+    int argcvalue = argc;
+    argcvalue++;
     return 0;
 }
