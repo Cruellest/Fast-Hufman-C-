@@ -672,17 +672,21 @@ Decompact::~Decompact() {
 }
 
 int main(int argc, char const *argv[]) {
-    if (strcmp(argv[1], "c") == 0) {
-        if (strcmp(argv[4],"--debug")) {
-            Compact file(argv[2], argv[3], true);
-        } else {
-            Compact file(argv[2], argv[3], false);
-        }
-    } else if (strcmp(argv[1], "d") == 0) {
-        Decompact file(argv[2], argv[3]);
+    if (argc > 5){
+        printf("Too many arguments\n");
+        return 1;
     }
 
-    int argcvalue = argc;
-    argcvalue++;
+    else if(argc < 4){
+        printf("Too few arguments\n");
+        return 1;
+    }
+
+    if (strcmp(argv[1],"c") == 0){
+        Compact File(argv[2],argv[3],false);
+
+    }else if(strcmp(argv[1],"d") == 0){
+        Decompact File(argv[2],argv[3]);
+    }
     return 0;
 }
