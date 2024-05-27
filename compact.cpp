@@ -1,3 +1,11 @@
+/**************************************************
+*
+* Gabriel Paes Duarte Baltazar, Maria Fernanda Colombo
+* Trabalho de Estruturas de Dados
+* Professor(a): Diego Rubert
+*
+*/
+
 #include <cstdio>
 #include <map>
 #include <cstddef>
@@ -585,37 +593,54 @@ private:
     void reconstruirArvore(Node *no, int &cont);        //Metodo Para reconstruir a arvore;
     void escreverDados();                               //Metodo para escrever os dados no arquivo;
     void decodificarLetra(Node *no, uint32_t *cont);    //Metodo para decodificar os codigos das letras;
-
+    void debugOption();
 
 public:
-    Decompact(string fileIn, string fileOut);   //Construtor da classe (Ativa a decompactação);
+    Decompact(string fileIn, string fileOut,bool debug);   //Construtor da classe (Ativa a decompactação);
     ~Decompact();                               //Destrutor da classe;
 };
 
-Decompact::Decompact(string fileIn, string fileOut) {
+Decompact::Decompact(string fileIn, string fileOut,bool debug) {
     this->fileIn = fopen(fileIn.c_str(), "rb");
+    if(this->fileIn == nullptr){
+        printf("Arquivo de entrada não encontrado\n");
+        exit(1);
+        return;
+    }
     this->fileOut = fopen(fileOut.c_str(), "wb");
+    if(this->fileOut == nullptr){
+        printf("Arquivo de Saida não encontrado\n");
+        exit(1);
+        return;
+    }
     in = new Bits(this->fileIn);
 
     fread(&this->qntLetras, sizeof(uint16_t), 1, this->fileIn);
-    printf("Quantidade de characteres diferentes do arquivo: %d\n", this->qntLetras);
-
     fread(&tamanhoDoArquivo, sizeof(uint32_t), 1, this->fileIn);
-    printf("Quantidade total de characteres no arquivo: %d\n", this->tamanhoDoArquivo);
-
-    printf("Characteres diferentes no Arquivo: ");
     for (int i = 0; i < this->qntLetras; i++) {
         letras.push_back(fgetc(this->fileIn));
-        printf("%c ", this->letras[i]);
     }
-    printf("\n");
 
     Node *no = new Node();
     this->huff = new HuffmansTree(no);
     int cont = 0;
     reconstruirArvore(this->huff->root, cont);
-    this->huff->escreve();
     escreverDados();
+
+    if(debug){
+        debugOption();
+    }
+}
+
+void Decompact::debugOption(){
+    printf("Quantidade de characteres diferentes do arquivo: %d\n", this->qntLetras);
+    printf("Quantidade total de characteres no arquivo: %d\n", this->tamanhoDoArquivo);
+    printf("Characteres diferentes no Arquivo: ");
+    for (int i = 0; i < this->qntLetras; i++) {
+        printf("%c ", this->letras[i]);
+    }
+    printf("\n");
+    this->huff->escreve();
 }
 
 void Decompact::reconstruirArvore(Node *no, int &cont) {
@@ -682,11 +707,14 @@ int main(int argc, char const *argv[]) {
         return 1;
     }
 
+    bool debug = false; //Flag para depuração caso queira checar todas as variaveis usadas
+                        //só setar como true;
+
     if (strcmp(argv[1],"c") == 0){
-        Compact File(argv[2],argv[3],false);
+        Compact File(argv[2],argv[3],debug);
 
     }else if(strcmp(argv[1],"d") == 0){
-        Decompact File(argv[2],argv[3]);
+        Decompact File(argv[2],argv[3],debug);
     }
     return 0;
 }
