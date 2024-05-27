@@ -697,7 +697,7 @@ Decompact::~Decompact() {
 }
 
 int main(int argc, char const *argv[]) {
-    if (argc > 5){
+    if (argc > 4){
         printf("Too many arguments\n");
         return 1;
     }
